@@ -1,0 +1,57 @@
+config:
+  target: "http://httpbin.org/"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: Artillery Load Test
+  plugins:
+    ensure: {}
+  ensure:
+    thresholds:
+      - http.response_time.p95: 1000
+      - http.response_time.mean: 500
+      - http.status.2xx.percent: 90
+      - http.status.4xx.percent: 5
+      - http.status.5xx.percent: 5
+    conditions:
+      - expression: vusers.failed == 0
+      - expression: "http.request_rate >= 2 and http.response_time.max < 600"
+  before:
+    flow:
+      - log: "Starting load test"
+      - post:
+          url: "{{target}}/auth/login"
+          json:
+            username: "artillery_test@qa.team"
+            password: "6VcapnJ9X!Rw9UQ"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+            - json: "$.refreshToken"
+              as: "refreshToken"
+  after:
+    flow:
+      - get:
+          url: "{{target}}/auth/logout"
+          cookie:
+            refreshToken: "{{refreshToken}}"
+          headers:
+            "Authorization": "Bearer {{ accessToken }}"
+      - log: "Load test completed"
+scenarios:
+  - name: Load Test Scenario
+    flow:
+      - get:
+          url: "{{ target }}/get"
+      - post:
+          url: "{{ target }}/post"
+          json:
+            username: "Test User"
+            password: "Temp Password"
+          capture:
+            - json: "$.json"
+              as: "request_body"
+            - json: "$.headers.Host"
+              as: "host"
+      - log: "Json value from response is: {{request_body}}"
+      - log: "Host value from response is: {{host}}"

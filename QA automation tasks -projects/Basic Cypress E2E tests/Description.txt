@@ -1,0 +1,1 @@
+Basic e2e cypress  testing  using login commands on GoIT lerning site eduGoitGlobal  
